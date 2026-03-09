@@ -4,8 +4,8 @@ import { queryAll, queryOne, execute } from "../database.js";
 export const chatRoutes = Router();
 
 // Get chat history
-chatRoutes.get("/history", (req, res) => {
-  const messages = queryAll(
+chatRoutes.get("/history", async (req, res) => {
+  const messages = await queryAll(
     "SELECT id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at ASC LIMIT 100",
     [req.userId]
   );
@@ -13,44 +13,44 @@ chatRoutes.get("/history", (req, res) => {
 });
 
 // Send message and get AI response
-chatRoutes.post("/send", (req, res) => {
+chatRoutes.post("/send", async (req, res) => {
   const { message } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: "Message required" });
 
   const userMsg = message.trim().substring(0, 2000);
 
   // Save user message
-  execute("INSERT INTO chat_messages (user_id, role, content) VALUES (?, 'user', ?)", [req.userId, userMsg]);
+  await execute("INSERT INTO chat_messages (user_id, role, content) VALUES (?, 'user', ?)", [req.userId, userMsg]);
 
   // Gather user's study context
-  const context = gatherUserContext(req.userId);
+  const context = await gatherUserContext(req.userId);
 
   // Generate intelligent response
   const reply = generateResponse(userMsg, context);
 
   // Save assistant reply
-  execute("INSERT INTO chat_messages (user_id, role, content) VALUES (?, 'assistant', ?)", [req.userId, reply]);
+  await execute("INSERT INTO chat_messages (user_id, role, content) VALUES (?, 'assistant', ?)", [req.userId, reply]);
 
   res.json({ reply });
 });
 
 // Clear chat history
-chatRoutes.delete("/history", (req, res) => {
-  execute("DELETE FROM chat_messages WHERE user_id = ?", [req.userId]);
+chatRoutes.delete("/history", async (req, res) => {
+  await execute("DELETE FROM chat_messages WHERE user_id = ?", [req.userId]);
   res.json({ success: true });
 });
 
-function gatherUserContext(userId) {
-  const subjects = queryAll("SELECT name, color FROM subjects WHERE user_id = ?", [userId]);
-  const noteCount = queryOne("SELECT COUNT(*) as c FROM notes WHERE user_id = ?", [userId])?.c || 0;
-  const cardCount = queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ?", [userId])?.c || 0;
-  const quizCount = queryOne("SELECT COUNT(*) as c FROM quizzes WHERE user_id = ?", [userId])?.c || 0;
-  const dueCards = queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ? AND next_review <= datetime('now')", [userId])?.c || 0;
-  const todayMins = queryOne("SELECT COALESCE(SUM(duration_minutes), 0) as m FROM study_sessions WHERE user_id = ? AND session_date = date('now')", [userId])?.m || 0;
-  const weekMins = queryOne("SELECT COALESCE(SUM(duration_minutes), 0) as m FROM study_sessions WHERE user_id = ? AND session_date >= date('now', '-7 days')", [userId])?.m || 0;
-  const recentNotes = queryAll("SELECT title, subject_id FROM notes WHERE user_id = ? ORDER BY updated_at DESC LIMIT 5", [userId]);
-  const recentCards = queryAll("SELECT question, answer, subject_id FROM flashcards WHERE user_id = ? ORDER BY created_at DESC LIMIT 5", [userId]);
-  const settings = queryOne("SELECT study_goal_minutes FROM user_settings WHERE user_id = ?", [userId]);
+async function gatherUserContext(userId) {
+  const subjects = await queryAll("SELECT name, color FROM subjects WHERE user_id = ?", [userId]);
+  const noteCount = (await queryOne("SELECT COUNT(*) as c FROM notes WHERE user_id = ?", [userId]))?.c || 0;
+  const cardCount = (await queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ?", [userId]))?.c || 0;
+  const quizCount = (await queryOne("SELECT COUNT(*) as c FROM quizzes WHERE user_id = ?", [userId]))?.c || 0;
+  const dueCards = (await queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ? AND next_review <= datetime('now')", [userId]))?.c || 0;
+  const todayMins = (await queryOne("SELECT COALESCE(SUM(duration_minutes), 0) as m FROM study_sessions WHERE user_id = ? AND session_date = date('now')", [userId]))?.m || 0;
+  const weekMins = (await queryOne("SELECT COALESCE(SUM(duration_minutes), 0) as m FROM study_sessions WHERE user_id = ? AND session_date >= date('now', '-7 days')", [userId]))?.m || 0;
+  const recentNotes = await queryAll("SELECT title, subject_id FROM notes WHERE user_id = ? ORDER BY updated_at DESC LIMIT 5", [userId]);
+  const recentCards = await queryAll("SELECT question, answer, subject_id FROM flashcards WHERE user_id = ? ORDER BY created_at DESC LIMIT 5", [userId]);
+  const settings = await queryOne("SELECT study_goal_minutes FROM user_settings WHERE user_id = ?", [userId]);
   const goalMins = settings?.study_goal_minutes || 60;
 
   return { subjects, noteCount, cardCount, quizCount, dueCards, todayMins, weekMins, recentNotes, recentCards, goalMins };

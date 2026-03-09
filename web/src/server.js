@@ -24,6 +24,11 @@ const publicDir = path.resolve(__dirname, "../public");
 
 app.use(express.json());
 
+// Health check (before DB init — always works)
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", service: "study-platform" });
+});
+
 // On Vercel, static files are served by the CDN; locally use Express
 if (!process.env.VERCEL) {
   app.use(express.static(publicDir));
@@ -54,11 +59,6 @@ app.use(async (_req, _res, next) => {
 // Public auth routes (no token needed)
 app.use("/api/auth", authRoutes);
 
-// Health check (public)
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", service: "study-platform" });
-});
-
 // All other API routes require authentication
 app.use("/api/subjects", authMiddleware, subjectRoutes);
 app.use("/api/notes", authMiddleware, noteRoutes);
@@ -76,6 +76,12 @@ if (!process.env.VERCEL) {
     res.sendFile(path.join(publicDir, "index.html"));
   });
 }
+
+// Global error handler — returns JSON on API errors
+app.use((err, _req, res, _next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: err.message || "Internal Server Error" });
+});
 
 // Start server locally
 if (!process.env.VERCEL) {

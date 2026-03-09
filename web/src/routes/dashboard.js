@@ -3,32 +3,32 @@ import { queryAll, queryOne } from "../database.js";
 
 export const dashboardRoutes = Router();
 
-dashboardRoutes.get("/stats", (req, res) => {
+dashboardRoutes.get("/stats", async (req, res) => {
   const uid = req.userId;
-  const totalSubjects = queryOne("SELECT COUNT(*) as c FROM subjects WHERE user_id = ?", [uid])?.c || 0;
-  const totalNotes = queryOne("SELECT COUNT(*) as c FROM notes WHERE user_id = ?", [uid])?.c || 0;
-  const totalCards = queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ?", [uid])?.c || 0;
-  const totalQuizzes = queryOne("SELECT COUNT(*) as c FROM quizzes WHERE user_id = ?", [uid])?.c || 0;
-  const cardsToReview = queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ? AND next_review <= datetime('now')", [uid])?.c || 0;
+  const totalSubjects = (await queryOne("SELECT COUNT(*) as c FROM subjects WHERE user_id = ?", [uid]))?.c || 0;
+  const totalNotes = (await queryOne("SELECT COUNT(*) as c FROM notes WHERE user_id = ?", [uid]))?.c || 0;
+  const totalCards = (await queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ?", [uid]))?.c || 0;
+  const totalQuizzes = (await queryOne("SELECT COUNT(*) as c FROM quizzes WHERE user_id = ?", [uid]))?.c || 0;
+  const cardsToReview = (await queryOne("SELECT COUNT(*) as c FROM flashcards WHERE user_id = ? AND next_review <= datetime('now')", [uid]))?.c || 0;
 
-  const studyToday = queryOne(`
+  const studyToday = (await queryOne(`
     SELECT COALESCE(SUM(duration_minutes), 0) as minutes
     FROM study_sessions WHERE user_id = ? AND session_date = date('now')
-  `, [uid])?.minutes || 0;
+  `, [uid]))?.minutes || 0;
 
-  const studyThisWeek = queryOne(`
+  const studyThisWeek = (await queryOne(`
     SELECT COALESCE(SUM(duration_minutes), 0) as minutes
     FROM study_sessions WHERE user_id = ? AND session_date >= date('now', '-7 days')
-  `, [uid])?.minutes || 0;
+  `, [uid]))?.minutes || 0;
 
-  const weeklyData = queryAll(`
+  const weeklyData = await queryAll(`
     SELECT session_date, SUM(duration_minutes) as minutes
     FROM study_sessions
     WHERE user_id = ? AND session_date >= date('now', '-7 days')
     GROUP BY session_date ORDER BY session_date
   `, [uid]);
 
-  const subjectBreakdown = queryAll(`
+  const subjectBreakdown = await queryAll(`
     SELECT s.name, s.color, COALESCE(SUM(ss.duration_minutes), 0) as minutes
     FROM subjects s LEFT JOIN study_sessions ss ON s.id = ss.subject_id
     AND ss.session_date >= date('now', '-30 days') AND ss.user_id = ?
@@ -36,7 +36,7 @@ dashboardRoutes.get("/stats", (req, res) => {
     GROUP BY s.id ORDER BY minutes DESC LIMIT 6
   `, [uid, uid]);
 
-  const recentAttempts = queryAll(`
+  const recentAttempts = await queryAll(`
     SELECT qa.*, q.title as quiz_title, s.name as subject_name
     FROM quiz_attempts qa
     JOIN quizzes q ON qa.quiz_id = q.id
@@ -45,7 +45,7 @@ dashboardRoutes.get("/stats", (req, res) => {
     ORDER BY qa.attempted_at DESC LIMIT 5
   `, [uid]);
 
-  const streak = calculateStreak(uid);
+  const streak = await calculateStreak(uid);
 
   res.json({
     totalSubjects, totalNotes, totalCards, totalQuizzes, cardsToReview,
@@ -53,8 +53,8 @@ dashboardRoutes.get("/stats", (req, res) => {
   });
 });
 
-function calculateStreak(userId) {
-  const rows = queryAll(`
+async function calculateStreak(userId) {
+  const rows = await queryAll(`
     SELECT DISTINCT session_date FROM study_sessions
     WHERE user_id = ?
     ORDER BY session_date DESC LIMIT 60

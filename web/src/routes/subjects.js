@@ -3,8 +3,8 @@ import { queryAll, execute } from "../database.js";
 
 export const subjectRoutes = Router();
 
-subjectRoutes.get("/", (req, res) => {
-  const subjects = queryAll(`
+subjectRoutes.get("/", async (req, res) => {
+  const subjects = await queryAll(`
     SELECT s.*,
       (SELECT COUNT(*) FROM notes WHERE subject_id = s.id AND user_id = ?) as note_count,
       (SELECT COUNT(*) FROM flashcards WHERE subject_id = s.id AND user_id = ?) as card_count,
@@ -14,11 +14,11 @@ subjectRoutes.get("/", (req, res) => {
   res.json(subjects);
 });
 
-subjectRoutes.post("/", (req, res) => {
+subjectRoutes.post("/", async (req, res) => {
   const { name, color, icon } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
   try {
-    const { lastId } = execute("INSERT INTO subjects (user_id, name, color, icon) VALUES (?, ?, ?, ?)",
+    const { lastId } = await execute("INSERT INTO subjects (user_id, name, color, icon) VALUES (?, ?, ?, ?)",
       [req.userId, name.trim(), color || "#6C63FF", icon || "📘"]);
     res.status(201).json({ id: lastId, name: name.trim(), color, icon });
   } catch (e) {
@@ -27,15 +27,15 @@ subjectRoutes.post("/", (req, res) => {
   }
 });
 
-subjectRoutes.put("/:id", (req, res) => {
+subjectRoutes.put("/:id", async (req, res) => {
   const { name, color, icon } = req.body;
   const id = Number(req.params.id);
-  execute("UPDATE subjects SET name = COALESCE(?, name), color = COALESCE(?, color), icon = COALESCE(?, icon) WHERE id = ? AND user_id = ?",
+  await execute("UPDATE subjects SET name = COALESCE(?, name), color = COALESCE(?, color), icon = COALESCE(?, icon) WHERE id = ? AND user_id = ?",
     [name || null, color || null, icon || null, id, req.userId]);
   res.json({ success: true });
 });
 
-subjectRoutes.delete("/:id", (req, res) => {
-  execute("DELETE FROM subjects WHERE id = ? AND user_id = ?", [Number(req.params.id), req.userId]);
+subjectRoutes.delete("/:id", async (req, res) => {
+  await execute("DELETE FROM subjects WHERE id = ? AND user_id = ?", [Number(req.params.id), req.userId]);
   res.json({ success: true });
 });
