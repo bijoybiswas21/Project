@@ -16,6 +16,7 @@ import { sessionRoutes } from "./routes/sessions.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { chatRoutes } from "./routes/chat.js";
+import { contactRoutes } from "./routes/contact.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -67,6 +68,7 @@ app.use("/api/sessions", authMiddleware, sessionRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/settings", authMiddleware, settingsRoutes);
 app.use("/api/chat", authMiddleware, chatRoutes);
+app.use("/api/contact", authMiddleware, contactRoutes);
 
 // SPA fallback (local only; Vercel handles this via rewrites)
 if (!process.env.VERCEL) {

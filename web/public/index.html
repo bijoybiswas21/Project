@@ -38,6 +38,58 @@
           <button type="submit" class="btn btn-primary btn-full auth-submit" id="signInBtn">Sign In</button>
         </form>
         <p class="auth-switch">Don't have an account? <a href="#" onclick="showAuthCard('signUpCard')">Sign Up</a></p>
+        <p class="auth-switch"><a href="#" onclick="showAuthCard('forgotCard')">Forgot Password?</a></p>
+      </div>
+
+      <!-- Forgot Password Form -->
+      <div class="auth-card hidden" id="forgotCard">
+        <h2 class="auth-card-title">Forgot Password</h2>
+        <p class="auth-card-subtitle">Enter your email to get a reset code</p>
+        <form id="forgotForm" onsubmit="handleForgotPassword(event)">
+          <div class="auth-field">
+            <label for="forgotEmail">Email</label>
+            <input type="email" id="forgotEmail" class="form-input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div id="forgotError" class="auth-error hidden"></div>
+          <div id="forgotSuccess" class="auth-success hidden"></div>
+          <button type="submit" class="btn btn-primary btn-full auth-submit" id="forgotBtn">Send Reset Code</button>
+        </form>
+        <p class="auth-switch"><a href="#" onclick="showAuthCard('resetCard')">Already have a code?</a></p>
+        <p class="auth-switch">Back to <a href="#" onclick="showAuthCard('signInCard')">Sign In</a></p>
+      </div>
+
+      <!-- Reset Password Form -->
+      <div class="auth-card hidden" id="resetCard">
+        <h2 class="auth-card-title">Reset Password</h2>
+        <p class="auth-card-subtitle">Enter the code and your new password</p>
+        <form id="resetForm" onsubmit="handleResetPassword(event)">
+          <div class="auth-field">
+            <label for="resetEmail">Email</label>
+            <input type="email" id="resetEmail" class="form-input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="auth-field">
+            <label for="resetCode">Reset Code</label>
+            <input type="text" id="resetCode" class="form-input" placeholder="6-digit code" required maxlength="6" pattern="[0-9]{6}">
+          </div>
+          <div class="auth-field">
+            <label for="resetPassword">New Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="resetPassword" class="form-input" placeholder="Min 8 characters" required minlength="8">
+              <button type="button" class="password-toggle" onclick="togglePassword('resetPassword', this)">👁️</button>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="resetConfirm">Confirm New Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="resetConfirm" class="form-input" placeholder="Re-enter password" required minlength="8">
+              <button type="button" class="password-toggle" onclick="togglePassword('resetConfirm', this)">👁️</button>
+            </div>
+          </div>
+          <div id="resetError" class="auth-error hidden"></div>
+          <div id="resetSuccess" class="auth-success hidden"></div>
+          <button type="submit" class="btn btn-primary btn-full auth-submit" id="resetBtn">Reset Password</button>
+        </form>
+        <p class="auth-switch">Back to <a href="#" onclick="showAuthCard('signInCard')">Sign In</a></p>
       </div>
 
       <!-- Sign Up Form -->
@@ -104,6 +156,9 @@
       </a>
       <a href="#" class="nav-item" data-page="settings">
         <span class="nav-icon">⚙️</span> Settings
+      </a>
+      <a href="#" class="nav-item" data-page="contact">
+        <span class="nav-icon">✉️</span> Messages <span class="nav-badge hidden" id="msgBadge">0</span>
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -438,7 +493,74 @@
         </div>
       </div>
     </section>
+
+    <!-- Contact / Messages Page -->
+    <section class="page" id="page-contact">
+      <div class="page-header">
+        <h1>Messages</h1>
+        <button class="btn btn-primary" onclick="openComposeModal()">✉️ Compose</button>
+      </div>
+
+      <div class="msg-tabs">
+        <button class="msg-tab active" id="tabInbox" onclick="switchMsgTab('inbox')">📥 Inbox</button>
+        <button class="msg-tab" id="tabSent" onclick="switchMsgTab('sent')">📤 Sent</button>
+      </div>
+
+      <div class="msg-list" id="msgList">
+        <div class="empty-state">No messages yet</div>
+      </div>
+    </section>
   </main>
+
+  <!-- Compose Message Modal -->
+  <div class="modal-overlay" id="composeModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>✉️ New Message</h3>
+        <button class="modal-close" onclick="closeComposeModal()">&times;</button>
+      </div>
+      <form onsubmit="handleSendMessage(event)">
+        <div class="auth-field">
+          <label for="composeTo">To (email)</label>
+          <input type="email" id="composeTo" class="form-input" placeholder="recipient@example.com" required autocomplete="off">
+          <div class="user-search-results hidden" id="userSearchResults"></div>
+        </div>
+        <div class="auth-field">
+          <label for="composeSubject">Subject</label>
+          <input type="text" id="composeSubject" class="form-input" placeholder="Message subject" required maxlength="200">
+        </div>
+        <div class="auth-field">
+          <label for="composeBody">Message</label>
+          <textarea id="composeBody" class="form-input msg-textarea" placeholder="Write your message..." required maxlength="5000" rows="6"></textarea>
+        </div>
+        <div id="composeError" class="auth-error hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeComposeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="composeSendBtn">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Message Modal -->
+  <div class="modal-overlay" id="viewMsgModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="viewMsgSubject">Subject</h3>
+        <button class="modal-close" onclick="closeViewMsgModal()">&times;</button>
+      </div>
+      <div class="view-msg-meta">
+        <span id="viewMsgFrom"></span>
+        <span id="viewMsgDate"></span>
+      </div>
+      <div class="view-msg-body" id="viewMsgBody"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeViewMsgModal()">Close</button>
+        <button class="btn btn-primary" id="viewMsgReplyBtn" onclick="replyToMessage()">↩️ Reply</button>
+        <button class="btn btn-danger" id="viewMsgDeleteBtn" onclick="deleteCurrentMessage()">🗑 Delete</button>
+      </div>
+    </div>
+  </div>
 
   <!-- AI Chat Widget -->
   <div class="chat-fab" id="chatFab" onclick="toggleChat()">

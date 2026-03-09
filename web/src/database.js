@@ -143,6 +143,19 @@ export async function initDb() {
     )
   `);
 
+  // Password reset tokens
+  db.run(`
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   // Chat messages
   db.run(`
     CREATE TABLE IF NOT EXISTS chat_messages (
@@ -152,6 +165,21 @@ export async function initDb() {
       content TEXT NOT NULL,
       created_at DATETIME DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // User messages (mail)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      recipient_id INTEGER NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT (datetime('now')),
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 

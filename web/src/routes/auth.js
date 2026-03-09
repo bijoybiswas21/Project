@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { queryOne, execute } from "../database.js";
 import { signToken, authMiddleware } from "../auth.js";
 
@@ -72,6 +73,72 @@ authRoutes.post("/signin", async (req, res) => {
     token,
     user: { id: user.id, name: user.name, email: user.email }
   });
+});
+
+// Forgot Password — generate a reset code
+authRoutes.post("/forgot-password", (req, res) => {
+  const { email } = req.body;
+  if (!email?.trim()) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  const user = queryOne("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()]);
+  if (!user) {
+    return res.status(404).json({ error: "No account found with this email" });
+  }
+
+  // Delete old unused tokens for this user
+  execute("DELETE FROM reset_tokens WHERE user_id = ? AND used = 0", [user.id]);
+
+  // Generate a 6-digit code
+  const code = crypto.randomInt(100000, 999999).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+  execute(
+    "INSERT INTO reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
+    [user.id, code, expiresAt]
+  );
+
+  res.json({ message: "Reset code generated", code });
+});
+
+// Reset Password — verify code and set new password
+authRoutes.post("/reset-password", async (req, res) => {
+  const { email, code, newPassword } = req.body;
+
+  if (!email?.trim() || !code?.trim() || !newPassword) {
+    return res.status(400).json({ error: "Email, code, and new password are required" });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
+  }
+  if (newPassword.length > 128) {
+    return res.status(400).json({ error: "Password must be 128 characters or less" });
+  }
+
+  const user = queryOne("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()]);
+  if (!user) {
+    return res.status(404).json({ error: "No account found with this email" });
+  }
+
+  const tokenRow = queryOne(
+    "SELECT * FROM reset_tokens WHERE user_id = ? AND token = ? AND used = 0",
+    [user.id, code.trim()]
+  );
+  if (!tokenRow) {
+    return res.status(400).json({ error: "Invalid reset code" });
+  }
+  if (new Date(tokenRow.expires_at) < new Date()) {
+    return res.status(400).json({ error: "Reset code has expired" });
+  }
+
+  try {
+    const hash = await bcrypt.hash(newPassword, 12);
+    execute("UPDATE users SET password_hash = ? WHERE id = ?", [hash, user.id]);
+    execute("UPDATE reset_tokens SET used = 1 WHERE id = ?", [tokenRow.id]);
+    res.json({ message: "Password reset successfully" });
+  } catch {
+    res.status(500).json({ error: "Failed to reset password" });
+  }
 });
 
 // Get current user profile

@@ -19,10 +19,12 @@ function setToken(token) { localStorage.setItem("studyhub_token", token); }
 function clearToken() { localStorage.removeItem("studyhub_token"); }
 
 function showAuthCard(cardId) {
-  document.getElementById("signInCard").classList.toggle("hidden", cardId !== "signInCard");
-  document.getElementById("signUpCard").classList.toggle("hidden", cardId !== "signUpCard");
-  document.getElementById("signInError").classList.add("hidden");
-  document.getElementById("signUpError").classList.add("hidden");
+  ["signInCard", "signUpCard", "forgotCard", "resetCard"].forEach(id => {
+    document.getElementById(id).classList.toggle("hidden", cardId !== id);
+  });
+  ["signInError", "signUpError", "forgotError", "forgotSuccess", "resetError", "resetSuccess"].forEach(id => {
+    document.getElementById(id).classList.add("hidden");
+  });
 }
 
 function togglePassword(inputId, btn) {
@@ -40,6 +42,7 @@ function showApp() {
     document.getElementById("userAvatar").textContent = currentUser.name.charAt(0).toUpperCase();
   }
   navigateTo("dashboard");
+  loadUnreadCount();
 }
 
 function showAuth() {
@@ -124,6 +127,74 @@ async function handleSignUp(e) {
   }
 }
 
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const errEl = document.getElementById("forgotError");
+  const successEl = document.getElementById("forgotSuccess");
+  const btn = document.getElementById("forgotBtn");
+  errEl.classList.add("hidden");
+  successEl.classList.add("hidden");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  try {
+    const email = document.getElementById("forgotEmail").value.trim();
+    const data = await fetch(API + "/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error); return j; });
+    successEl.textContent = "Reset code: " + data.code + " (valid for 15 minutes)";
+    successEl.classList.remove("hidden");
+    // Pre-fill email on reset form
+    document.getElementById("resetEmail").value = email;
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Send Reset Code";
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const errEl = document.getElementById("resetError");
+  const successEl = document.getElementById("resetSuccess");
+  const btn = document.getElementById("resetBtn");
+  errEl.classList.add("hidden");
+  successEl.classList.add("hidden");
+
+  const email = document.getElementById("resetEmail").value.trim();
+  const code = document.getElementById("resetCode").value.trim();
+  const newPassword = document.getElementById("resetPassword").value;
+  const confirm = document.getElementById("resetConfirm").value;
+
+  if (newPassword !== confirm) {
+    errEl.textContent = "Passwords don't match";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Resetting...";
+  try {
+    await fetch(API + "/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, newPassword }),
+    }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error); return j; });
+    successEl.textContent = "Password reset! Redirecting to sign in...";
+    successEl.classList.remove("hidden");
+    setTimeout(() => showAuthCard("signInCard"), 2000);
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Reset Password";
+  }
+}
+
 function handleLogout() {
   clearToken();
   currentUser = null;
@@ -160,6 +231,7 @@ function navigateTo(page) {
     case "quizzes": loadSubjectSelectors(); loadQuizzes(); break;
     case "timer": loadSubjectSelectors(); loadSessions(); break;
     case "settings": loadSettings(); break;
+    case "contact": loadInbox(); loadUnreadCount(); break;
   }
 }
 
@@ -998,6 +1070,190 @@ async function deleteAccount() {
   } catch (e) {
     toast("Failed to delete account", "error");
   }
+}
+
+// ===== Contact / Messages =====
+let currentMsgTab = "inbox";
+let currentViewMsgId = null;
+let currentViewMsgSenderEmail = null;
+
+async function loadInbox() {
+  currentMsgTab = "inbox";
+  document.getElementById("tabInbox").classList.add("active");
+  document.getElementById("tabSent").classList.remove("active");
+  try {
+    const messages = await api("/contact/inbox");
+    renderMessages(messages, "inbox");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function loadSent() {
+  currentMsgTab = "sent";
+  document.getElementById("tabSent").classList.add("active");
+  document.getElementById("tabInbox").classList.remove("active");
+  try {
+    const messages = await api("/contact/sent");
+    renderMessages(messages, "sent");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function switchMsgTab(tab) {
+  if (tab === "inbox") loadInbox();
+  else loadSent();
+}
+
+function renderMessages(messages, type) {
+  const list = document.getElementById("msgList");
+  if (!messages.length) {
+    list.innerHTML = '<div class="empty-state">No messages</div>';
+    return;
+  }
+  list.innerHTML = messages.map(m => {
+    const name = type === "inbox" ? escapeHtml(m.sender_name) : escapeHtml(m.recipient_name);
+    const email = type === "inbox" ? escapeHtml(m.sender_email) : escapeHtml(m.recipient_email);
+    const unread = type === "inbox" && !m.read ? " msg-unread" : "";
+    const date = new Date(m.created_at + "Z").toLocaleString();
+    return `<div class="msg-item${unread}" onclick="viewMessage(${m.id}, '${type}')">
+      <div class="msg-item-header">
+        <span class="msg-item-name">${name}</span>
+        <span class="msg-item-date">${date}</span>
+      </div>
+      <div class="msg-item-subject">${escapeHtml(m.subject)}</div>
+      <div class="msg-item-preview">${escapeHtml(m.body).substring(0, 100)}${m.body.length > 100 ? "..." : ""}</div>
+    </div>`;
+  }).join("");
+}
+
+async function viewMessage(id, type) {
+  try {
+    const messages = type === "inbox"
+      ? await api("/contact/inbox")
+      : await api("/contact/sent");
+    const msg = messages.find(m => m.id === id);
+    if (!msg) return toast("Message not found", "error");
+
+    currentViewMsgId = id;
+    currentViewMsgSenderEmail = type === "inbox" ? msg.sender_email : msg.recipient_email;
+
+    document.getElementById("viewMsgSubject").textContent = msg.subject;
+    document.getElementById("viewMsgFrom").textContent = type === "inbox"
+      ? `From: ${msg.sender_name} <${msg.sender_email}>`
+      : `To: ${msg.recipient_name} <${msg.recipient_email}>`;
+    document.getElementById("viewMsgDate").textContent = new Date(msg.created_at + "Z").toLocaleString();
+    document.getElementById("viewMsgBody").textContent = msg.body;
+    document.getElementById("viewMsgReplyBtn").style.display = type === "inbox" ? "" : "none";
+    document.getElementById("viewMsgModal").classList.add("active");
+
+    if (type === "inbox" && !msg.read) {
+      await api(`/contact/${id}/read`, { method: "PUT" });
+      loadUnreadCount();
+    }
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function closeViewMsgModal() {
+  document.getElementById("viewMsgModal").classList.remove("active");
+  currentViewMsgId = null;
+  if (currentMsgTab === "inbox") loadInbox();
+  else loadSent();
+}
+
+function replyToMessage() {
+  closeViewMsgModal();
+  openComposeModal();
+  const subj = document.getElementById("viewMsgSubject").textContent;
+  document.getElementById("composeTo").value = currentViewMsgSenderEmail || "";
+  document.getElementById("composeSubject").value = subj.startsWith("Re: ") ? subj : "Re: " + subj;
+}
+
+async function deleteCurrentMessage() {
+  if (!currentViewMsgId) return;
+  try {
+    await api(`/contact/${currentViewMsgId}`, { method: "DELETE" });
+    toast("Message deleted");
+    closeViewMsgModal();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function openComposeModal() {
+  document.getElementById("composeModal").classList.add("active");
+  document.getElementById("composeTo").value = "";
+  document.getElementById("composeSubject").value = "";
+  document.getElementById("composeBody").value = "";
+  document.getElementById("composeError").classList.add("hidden");
+}
+
+function closeComposeModal() {
+  document.getElementById("composeModal").classList.remove("active");
+}
+
+async function handleSendMessage(e) {
+  e.preventDefault();
+  const errEl = document.getElementById("composeError");
+  const btn = document.getElementById("composeSendBtn");
+  errEl.classList.add("hidden");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  try {
+    const recipientEmail = document.getElementById("composeTo").value.trim();
+    const subject = document.getElementById("composeSubject").value.trim();
+    const body = document.getElementById("composeBody").value.trim();
+    await api("/contact/send", { method: "POST", body: { recipientEmail, subject, body } });
+    toast("Message sent!");
+    closeComposeModal();
+    if (currentMsgTab === "sent") loadSent();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Send Message";
+  }
+}
+
+let userSearchTimeout = null;
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "composeTo") return;
+  clearTimeout(userSearchTimeout);
+  const q = e.target.value.trim();
+  const results = document.getElementById("userSearchResults");
+  if (q.length < 2) { results.classList.add("hidden"); return; }
+  userSearchTimeout = setTimeout(async () => {
+    try {
+      const users = await api("/contact/search-users?q=" + encodeURIComponent(q));
+      if (!users.length) { results.classList.add("hidden"); return; }
+      results.innerHTML = users.map(u =>
+        `<div class="user-search-item" onclick="selectRecipient('${escapeHtml(u.email)}')">${escapeHtml(u.name)} &lt;${escapeHtml(u.email)}&gt;</div>`
+      ).join("");
+      results.classList.remove("hidden");
+    } catch { results.classList.add("hidden"); }
+  }, 300);
+});
+
+function selectRecipient(email) {
+  document.getElementById("composeTo").value = email;
+  document.getElementById("userSearchResults").classList.add("hidden");
+}
+
+async function loadUnreadCount() {
+  try {
+    const { count } = await api("/contact/unread-count");
+    const badge = document.getElementById("msgBadge");
+    if (count > 0) {
+      badge.textContent = count;
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  } catch {}
 }
 
 // ===== Chat Assistant =====
