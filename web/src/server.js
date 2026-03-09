@@ -1,13 +1,9 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";
 
-// Ensure data directory exists
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDir = path.resolve(__dirname, "../data");
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 import { initDb } from "./database.js";
 import { authMiddleware } from "./auth.js";
@@ -26,7 +22,33 @@ const port = Number(process.env.PORT) || 3000;
 const publicDir = path.resolve(__dirname, "../public");
 
 app.use(express.json());
-app.use(express.static(publicDir));
+
+// On Vercel, static files are served by the CDN; locally use Express
+if (!process.env.VERCEL) {
+  app.use(express.static(publicDir));
+}
+
+// Ensure DB is initialized before handling any request
+let dbReady = null;
+function ensureDb() {
+  if (!dbReady) {
+    dbReady = initDb().catch((err) => {
+      console.error("Failed to initialize database:", err);
+      dbReady = null;
+      throw err;
+    });
+  }
+  return dbReady;
+}
+
+app.use(async (_req, _res, next) => {
+  try {
+    await ensureDb();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Public auth routes (no token needed)
 app.use("/api/auth", authRoutes);
@@ -46,17 +68,21 @@ app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/settings", authMiddleware, settingsRoutes);
 app.use("/api/chat", authMiddleware, chatRoutes);
 
-// SPA fallback
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
-});
-
-// Initialize DB then start server
-initDb().then(() => {
-  app.listen(port, () => {
-    console.log(`Study Platform running at http://localhost:${port}`);
+// SPA fallback (local only; Vercel handles this via rewrites)
+if (!process.env.VERCEL) {
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(publicDir, "index.html"));
   });
-}).catch((err) => {
-  console.error("Failed to initialize database:", err);
-  process.exit(1);
-});
+}
+
+// Start server locally
+if (!process.env.VERCEL) {
+  ensureDb().then(() => {
+    app.listen(port, () => {
+      console.log(`Study Platform running at http://localhost:${port}`);
+    });
+  });
+}
+
+// Export for Vercel serverless
+export default app;

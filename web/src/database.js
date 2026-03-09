@@ -1,11 +1,17 @@
-import initSqlJs from "sql.js";
+import initSqlJs from "sql.js/dist/sql-asm.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dbPath = path.resolve(__dirname, "../data/study.db");
+
+// On Vercel, use /tmp (writable); locally use ../data
+const dataDir = process.env.VERCEL
+  ? "/tmp"
+  : path.resolve(__dirname, "../data");
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const dbPath = path.join(dataDir, "study.db");
 
 let db;
 

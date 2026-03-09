@@ -6,15 +6,21 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const secretPath = path.resolve(__dirname, "../data/.jwt-secret");
 
-// Generate and persist a random JWT secret per installation
+// On Vercel use env var; locally persist to file
 let JWT_SECRET;
-if (fs.existsSync(secretPath)) {
-  JWT_SECRET = fs.readFileSync(secretPath, "utf-8").trim();
+if (process.env.JWT_SECRET) {
+  JWT_SECRET = process.env.JWT_SECRET;
 } else {
-  JWT_SECRET = crypto.randomBytes(64).toString("hex");
-  fs.writeFileSync(secretPath, JWT_SECRET, "utf-8");
+  const dataDir = path.resolve(__dirname, "../data");
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  const secretPath = path.join(dataDir, ".jwt-secret");
+  if (fs.existsSync(secretPath)) {
+    JWT_SECRET = fs.readFileSync(secretPath, "utf-8").trim();
+  } else {
+    JWT_SECRET = crypto.randomBytes(64).toString("hex");
+    fs.writeFileSync(secretPath, JWT_SECRET, "utf-8");
+  }
 }
 
 const TOKEN_EXPIRY = "7d";
