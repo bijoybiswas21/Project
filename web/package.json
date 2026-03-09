@@ -1,0 +1,20 @@
+{
+  "name": "study-platform",
+  "version": "1.0.0",
+  "description": "Dynamic study platform with backend database",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": ["study", "education", "flashcards", "quiz", "notes"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "sql.js": "^1.11.0"
+  }
+}

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyHub - Dynamic Study Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Auth Page -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-container">
+      <div class="auth-brand">
+        <span class="auth-logo">📚</span>
+        <h1 class="auth-title">StudyHub</h1>
+        <p class="auth-tagline">Your intelligent study companion</p>
+      </div>
+
+      <!-- Sign In Form -->
+      <div class="auth-card" id="signInCard">
+        <h2 class="auth-card-title">Welcome Back</h2>
+        <p class="auth-card-subtitle">Sign in to continue studying</p>
+        <form id="signInForm" onsubmit="handleSignIn(event)">
+          <div class="auth-field">
+            <label for="signInEmail">Email</label>
+            <input type="email" id="signInEmail" class="form-input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="auth-field">
+            <label for="signInPassword">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="signInPassword" class="form-input" placeholder="Your password" required autocomplete="current-password" minlength="8">
+              <button type="button" class="password-toggle" onclick="togglePassword('signInPassword', this)">👁️</button>
+            </div>
+          </div>
+          <div id="signInError" class="auth-error hidden"></div>
+          <button type="submit" class="btn btn-primary btn-full auth-submit" id="signInBtn">Sign In</button>
+        </form>
+        <p class="auth-switch">Don't have an account? <a href="#" onclick="showAuthCard('signUpCard')">Sign Up</a></p>
+      </div>
+
+      <!-- Sign Up Form -->
+      <div class="auth-card hidden" id="signUpCard">
+        <h2 class="auth-card-title">Create Account</h2>
+        <p class="auth-card-subtitle">Start your learning journey</p>
+        <form id="signUpForm" onsubmit="handleSignUp(event)">
+          <div class="auth-field">
+            <label for="signUpName">Full Name</label>
+            <input type="text" id="signUpName" class="form-input" placeholder="Your name" required maxlength="50" autocomplete="name">
+          </div>
+          <div class="auth-field">
+            <label for="signUpEmail">Email</label>
+            <input type="email" id="signUpEmail" class="form-input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="auth-field">
+            <label for="signUpPassword">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="signUpPassword" class="form-input" placeholder="Min 8 characters" required autocomplete="new-password" minlength="8">
+              <button type="button" class="password-toggle" onclick="togglePassword('signUpPassword', this)">👁️</button>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="signUpConfirm">Confirm Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="signUpConfirm" class="form-input" placeholder="Re-enter password" required autocomplete="new-password" minlength="8">
+              <button type="button" class="password-toggle" onclick="togglePassword('signUpConfirm', this)">👁️</button>
+            </div>
+          </div>
+          <div id="signUpError" class="auth-error hidden"></div>
+          <button type="submit" class="btn btn-primary btn-full auth-submit" id="signUpBtn">Create Account</button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="#" onclick="showAuthCard('signInCard')">Sign In</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">📚</span>
+        <span class="logo-text">StudyHub</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="#" class="nav-item" data-page="subjects">
+        <span class="nav-icon">📘</span> Subjects
+      </a>
+      <a href="#" class="nav-item" data-page="notes">
+        <span class="nav-icon">📝</span> Notes
+      </a>
+      <a href="#" class="nav-item" data-page="flashcards">
+        <span class="nav-icon">🃏</span> Flashcards
+      </a>
+      <a href="#" class="nav-item" data-page="quizzes">
+        <span class="nav-icon">❓</span> Quizzes
+      </a>
+      <a href="#" class="nav-item" data-page="timer">
+        <span class="nav-icon">⏱️</span> Study Timer
+      </a>
+      <a href="#" class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-profile" id="userProfile">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-info">
+          <span class="user-name" id="userName">User</span>
+          <span class="user-email" id="userEmail">email</span>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()" title="Sign Out">🚪</button>
+      </div>
+      <div class="streak-badge" id="streakBadge">
+        <span class="streak-icon">🔥</span>
+        <span class="streak-count" id="streakCount">0</span>
+        <span class="streak-label">Day Streak</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Mobile header -->
+  <header class="mobile-header" id="mobileHeader">
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <span class="mobile-title">StudyHub</span>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <!-- Dashboard Page -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p class="page-subtitle">Welcome back! Here's your study overview.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card gradient-purple">
+          <div class="stat-icon">📘</div>
+          <div class="stat-info">
+            <span class="stat-value" id="statSubjects">0</span>
+            <span class="stat-label">Subjects</span>
+          </div>
+        </div>
+        <div class="stat-card gradient-blue">
+          <div class="stat-icon">📝</div>
+          <div class="stat-info">
+            <span class="stat-value" id="statNotes">0</span>
+            <span class="stat-label">Notes</span>
+          </div>
+        </div>
+        <div class="stat-card gradient-green">
+          <div class="stat-icon">🃏</div>
+          <div class="stat-info">
+            <span class="stat-value" id="statCards">0</span>
+            <span class="stat-label">Flashcards</span>
+          </div>
+        </div>
+        <div class="stat-card gradient-orange">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-info">
+            <span class="stat-value" id="statTodayMin">0</span>
+            <span class="stat-label">Minutes Today</span>
+          </div>
+        </div>
+      </div>
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3>Weekly Study Activity</h3>
+            <span class="badge" id="weeklyTotal">0 min</span>
+          </div>
+          <div class="chart-container" id="weeklyChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Subject Breakdown</h3>
+          </div>
+          <div id="subjectBreakdown" class="breakdown-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Cards Due for Review</h3>
+            <span class="badge badge-warning" id="dueCount">0</span>
+          </div>
+          <button class="btn btn-primary" onclick="navigateTo('flashcards'); startReview()">
+            Start Review Session
+          </button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Recent Quiz Scores</h3>
+          </div>
+          <div id="recentQuizzes" class="quiz-scores-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Subjects Page -->
+    <section class="page" id="page-subjects">
+      <div class="page-header">
+        <h1>Subjects</h1>
+        <button class="btn btn-primary" onclick="openModal('subjectModal')">+ New Subject</button>
+      </div>
+      <div class="subjects-grid" id="subjectsGrid"></div>
+    </section>
+
+    <!-- Notes Page -->
+    <section class="page" id="page-notes">
+      <div class="page-header">
+        <h1>Notes</h1>
+        <div class="header-actions">
+          <select id="noteSubjectFilter" class="select-input" onchange="loadNotes()">
+            <option value="">All Subjects</option>
+          </select>
+          <button class="btn btn-primary" onclick="openModal('noteModal')">+ New Note</button>
+        </div>
+      </div>
+      <div class="notes-grid" id="notesGrid"></div>
+    </section>
+
+    <!-- Flashcards Page -->
+    <section class="page" id="page-flashcards">
+      <div class="page-header">
+        <h1>Flashcards</h1>
+        <div class="header-actions">
+          <select id="cardSubjectFilter" class="select-input" onchange="loadFlashcards()">
+            <option value="">All Subjects</option>
+          </select>
+          <button class="btn btn-secondary" onclick="startReview()">Review Due Cards</button>
+          <button class="btn btn-primary" onclick="openModal('flashcardModal')">+ New Card</button>
+        </div>
+      </div>
+      <div id="flashcardsList" class="cards-list"></div>
+      <!-- Review Mode -->
+      <div id="reviewMode" class="review-mode hidden">
+        <div class="review-progress">
+          <div class="review-progress-bar" id="reviewProgressBar"></div>
+        </div>
+        <div class="review-counter" id="reviewCounter">0 / 0</div>
+        <div class="flashcard-review" id="reviewCard" onclick="flipCard()">
+          <div class="flashcard-inner" id="reviewCardInner">
+            <div class="flashcard-front">
+              <p id="reviewQuestion"></p>
+            </div>
+            <div class="flashcard-back">
+              <p id="reviewAnswer"></p>
+            </div>
+          </div>
+        </div>
+        <div class="review-actions" id="reviewActions">
+          <button class="btn btn-danger" onclick="rateCard(1)">Hard</button>
+          <button class="btn btn-warning" onclick="rateCard(3)">Good</button>
+          <button class="btn btn-success" onclick="rateCard(5)">Easy</button>
+        </div>
+        <button class="btn btn-ghost" onclick="endReview()">End Review</button>
+      </div>
+    </section>
+
+    <!-- Quizzes Page -->
+    <section class="page" id="page-quizzes">
+      <div class="page-header">
+        <h1>Quizzes</h1>
+        <button class="btn btn-primary" onclick="openModal('quizModal')">+ Create Quiz</button>
+      </div>
+      <div class="quizzes-list" id="quizzesList"></div>
+      <!-- Quiz Taking View -->
+      <div id="quizTaking" class="hidden">
+        <div class="quiz-header-bar">
+          <h2 id="quizTakingTitle"></h2>
+          <button class="btn btn-ghost" onclick="cancelQuiz()">Cancel</button>
+        </div>
+        <div id="quizQuestions" class="quiz-questions"></div>
+        <button class="btn btn-primary btn-lg" onclick="submitQuiz()">Submit Quiz</button>
+      </div>
+      <!-- Quiz Results -->
+      <div id="quizResults" class="hidden">
+        <div class="quiz-result-card">
+          <h2>Quiz Results</h2>
+          <div class="score-circle" id="scoreCircle">
+            <span class="score-value" id="scoreValue">0%</span>
+          </div>
+          <p id="scoreText"></p>
+          <div id="resultDetails" class="result-details"></div>
+          <button class="btn btn-primary" onclick="cancelQuiz()">Back to Quizzes</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Timer Page -->
+    <section class="page" id="page-timer">
+      <div class="page-header">
+        <h1>Study Timer</h1>
+      </div>
+      <div class="timer-container">
+        <div class="timer-card">
+          <div class="timer-display" id="timerDisplay">25:00</div>
+          <div class="timer-label" id="timerLabel">Focus Time</div>
+          <div class="timer-controls">
+            <button class="btn btn-primary btn-lg" id="timerStartBtn" onclick="toggleTimer()">Start</button>
+            <button class="btn btn-secondary" onclick="resetTimer()">Reset</button>
+          </div>
+          <div class="timer-settings">
+            <label>
+              Subject:
+              <select id="timerSubject" class="select-input">
+                <option value="">General</option>
+              </select>
+            </label>
+            <label>
+              Duration:
+              <select id="timerDuration" class="select-input" onchange="setTimerDuration()">
+                <option value="15">15 min</option>
+                <option value="25" selected>25 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+                <option value="90">90 min</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Recent Sessions</h3>
+          </div>
+          <div id="recentSessions" class="sessions-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Page -->
+    <section class="page" id="page-settings">
+      <div class="page-header">
+        <h1>Settings</h1>
+      </div>
+      <div class="settings-grid">
+        <!-- Profile Section -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">👤 Profile</h3>
+          <div class="settings-card">
+            <div class="setting-item">
+              <label>Display Name</label>
+              <input type="text" id="settingName" class="form-input" maxlength="50">
+            </div>
+            <div class="setting-item">
+              <label>Email</label>
+              <input type="email" id="settingEmail" class="form-input" disabled>
+            </div>
+            <button class="btn btn-primary" onclick="saveProfile()">Update Profile</button>
+          </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">🔒 Change Password</h3>
+          <div class="settings-card">
+            <div class="setting-item">
+              <label>Current Password</label>
+              <input type="password" id="settingCurrentPwd" class="form-input" placeholder="Current password">
+            </div>
+            <div class="setting-item">
+              <label>New Password</label>
+              <input type="password" id="settingNewPwd" class="form-input" placeholder="Min 8 characters">
+            </div>
+            <div class="setting-item">
+              <label>Confirm New Password</label>
+              <input type="password" id="settingConfirmPwd" class="form-input" placeholder="Re-enter new password">
+            </div>
+            <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+          </div>
+        </div>
+
+        <!-- Study Preferences -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">📚 Study Preferences</h3>
+          <div class="settings-card">
+            <div class="setting-item">
+              <label>Daily Study Goal (minutes)</label>
+              <input type="number" id="settingGoal" class="form-input" min="1" max="480" value="60">
+            </div>
+            <div class="setting-item">
+              <label>Default Timer Duration</label>
+              <select id="settingTimerDuration" class="form-input">
+                <option value="15">15 minutes</option>
+                <option value="25" selected>25 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">60 minutes</option>
+                <option value="90">90 minutes</option>
+              </select>
+            </div>
+            <div class="setting-toggle-row">
+              <span>🔔 Notifications</span>
+              <label class="toggle">
+                <input type="checkbox" id="settingNotifications" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-toggle-row">
+              <span>🔊 Sound Effects</span>
+              <label class="toggle">
+                <input type="checkbox" id="settingSounds" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-toggle-row">
+              <span>📅 Daily Reminder</span>
+              <label class="toggle">
+                <input type="checkbox" id="settingReminder">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <button class="btn btn-primary" onclick="saveStudySettings()">Save Preferences</button>
+          </div>
+        </div>
+
+        <!-- Data & Account -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">💾 Data & Account</h3>
+          <div class="settings-card">
+            <div class="setting-item-row">
+              <div>
+                <strong>Export Data</strong>
+                <p class="setting-desc">Download all your study data as JSON</p>
+              </div>
+              <button class="btn btn-secondary" onclick="exportData()">📥 Export</button>
+            </div>
+            <div class="setting-item-row danger-zone">
+              <div>
+                <strong>Delete Account</strong>
+                <p class="setting-desc">Permanently delete your account and all data</p>
+              </div>
+              <button class="btn btn-danger" onclick="deleteAccount()">🗑 Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- AI Chat Widget -->
+  <div class="chat-fab" id="chatFab" onclick="toggleChat()">
+    <span class="chat-fab-icon" id="chatFabIcon">🤖</span>
+    <span class="chat-fab-pulse"></span>
+  </div>
+
+  <div class="chat-panel hidden" id="chatPanel">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <span class="chat-avatar">🤖</span>
+        <div>
+          <div class="chat-header-title">Study Assistant</div>
+          <div class="chat-header-status"><span class="status-dot"></span> Online 24/7</div>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-header-btn" onclick="clearChatHistory()" title="Clear history">🗑</button>
+        <button class="chat-header-btn" onclick="toggleChat()" title="Close">&times;</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-welcome">
+        <span class="chat-welcome-icon">🤖</span>
+        <h4>Hi! I'm your Study Assistant</h4>
+        <p>Ask me anything about studying — tips, progress, strategies, or just say hi!</p>
+        <div class="chat-suggestions">
+          <button class="chat-suggestion" onclick="sendChatSuggestion('How am I doing?')">📊 My Progress</button>
+          <button class="chat-suggestion" onclick="sendChatSuggestion('Give me study tips')">💡 Study Tips</button>
+          <button class="chat-suggestion" onclick="sendChatSuggestion('Do I have cards to review?')">🃏 Review Cards</button>
+          <button class="chat-suggestion" onclick="sendChatSuggestion('What can you do?')">🤖 Capabilities</button>
+        </div>
+      </div>
+    </div>
+    <form class="chat-input-area" onsubmit="sendChatMessage(event)">
+      <input type="text" id="chatInput" class="chat-input" placeholder="Type a message..." autocomplete="off" maxlength="2000">
+      <button type="submit" class="chat-send-btn" id="chatSendBtn">➤</button>
+    </form>
+  </div>
+
+  <!-- Modals -->
+  <!-- Subject Modal -->
+  <div class="modal-overlay" id="subjectModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>New Subject</h2>
+        <button class="modal-close" onclick="closeModal('subjectModal')">&times;</button>
+      </div>
+      <form onsubmit="createSubject(event)">
+        <div class="form-group">
+          <label>Subject Name</label>
+          <input type="text" id="subjectName" class="form-input" placeholder="e.g. Mathematics" required>
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <div class="color-picker">
+            <button type="button" class="color-opt active" data-color="#6C63FF" style="background:#6C63FF"></button>
+            <button type="button" class="color-opt" data-color="#FF6584" style="background:#FF6584"></button>
+            <button type="button" class="color-opt" data-color="#43B97F" style="background:#43B97F"></button>
+            <button type="button" class="color-opt" data-color="#F5A623" style="background:#F5A623"></button>
+            <button type="button" class="color-opt" data-color="#4ECDC4" style="background:#4ECDC4"></button>
+            <button type="button" class="color-opt" data-color="#FC5C65" style="background:#FC5C65"></button>
+            <button type="button" class="color-opt" data-color="#45AAF2" style="background:#45AAF2"></button>
+            <button type="button" class="color-opt" data-color="#A55EEA" style="background:#A55EEA"></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Icon</label>
+          <div class="icon-picker">
+            <button type="button" class="icon-opt active" data-icon="📘">📘</button>
+            <button type="button" class="icon-opt" data-icon="🧮">🧮</button>
+            <button type="button" class="icon-opt" data-icon="🔬">🔬</button>
+            <button type="button" class="icon-opt" data-icon="🌍">🌍</button>
+            <button type="button" class="icon-opt" data-icon="📐">📐</button>
+            <button type="button" class="icon-opt" data-icon="💻">💻</button>
+            <button type="button" class="icon-opt" data-icon="🎨">🎨</button>
+            <button type="button" class="icon-opt" data-icon="📖">📖</button>
+            <button type="button" class="icon-opt" data-icon="⚗️">⚗️</button>
+            <button type="button" class="icon-opt" data-icon="🎵">🎵</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Create Subject</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Note Modal -->
+  <div class="modal-overlay" id="noteModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="noteModalTitle">New Note</h2>
+        <button class="modal-close" onclick="closeModal('noteModal')">&times;</button>
+      </div>
+      <form onsubmit="saveNote(event)">
+        <input type="hidden" id="noteEditId">
+        <div class="form-group">
+          <label>Subject</label>
+          <select id="noteSubject" class="form-input" required>
+            <option value="">Select Subject</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="noteTitle" class="form-input" placeholder="Note title" required>
+        </div>
+        <div class="form-group">
+          <label>Content</label>
+          <textarea id="noteContent" class="form-input form-textarea" placeholder="Write your notes here..." rows="10"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Save Note</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Flashcard Modal -->
+  <div class="modal-overlay" id="flashcardModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>New Flashcard</h2>
+        <button class="modal-close" onclick="closeModal('flashcardModal')">&times;</button>
+      </div>
+      <form onsubmit="createFlashcard(event)">
+        <div class="form-group">
+          <label>Subject</label>
+          <select id="cardSubject" class="form-input" required>
+            <option value="">Select Subject</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Question (Front)</label>
+          <textarea id="cardQuestion" class="form-input" placeholder="Enter question" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Answer (Back)</label>
+          <textarea id="cardAnswer" class="form-input" placeholder="Enter answer" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Create Card</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Quiz Modal -->
+  <div class="modal-overlay" id="quizModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>Create Quiz</h2>
+        <button class="modal-close" onclick="closeModal('quizModal')">&times;</button>
+      </div>
+      <form onsubmit="createQuiz(event)">
+        <div class="form-group">
+          <label>Subject</label>
+          <select id="quizSubject" class="form-input" required>
+            <option value="">Select Subject</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quiz Title</label>
+          <input type="text" id="quizTitle" class="form-input" placeholder="e.g. Chapter 5 Review" required>
+        </div>
+        <div id="quizQuestionsBuilder">
+          <div class="quiz-q-block" data-index="0">
+            <h4>Question 1</h4>
+            <div class="form-group">
+              <input type="text" class="form-input qq-text" placeholder="Question text" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><input type="text" class="form-input qq-a" placeholder="A)" required></div>
+              <div class="form-group"><input type="text" class="form-input qq-b" placeholder="B)" required></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><input type="text" class="form-input qq-c" placeholder="C)" required></div>
+              <div class="form-group"><input type="text" class="form-input qq-d" placeholder="D)" required></div>
+            </div>
+            <div class="form-group">
+              <label>Correct Answer</label>
+              <select class="form-input qq-correct" required>
+                <option value="A">A</option><option value="B">B</option>
+                <option value="C">C</option><option value="D">D</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost" onclick="addQuizQuestion()">+ Add Question</button>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:1rem">Create Quiz</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Note View Modal -->
+  <div class="modal-overlay" id="noteViewModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="noteViewTitle"></h2>
+        <button class="modal-close" onclick="closeModal('noteViewModal')">&times;</button>
+      </div>
+      <div class="note-view-meta" id="noteViewMeta"></div>
+      <div class="note-view-content" id="noteViewContent"></div>
+      <div class="note-view-actions">
+        <button class="btn btn-secondary" id="noteViewEditBtn">Edit</button>
+        <button class="btn btn-danger" id="noteViewDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Chat notification sound - silent placeholder -->
+  <audio id="chatSound" preload="auto"></audio>
+
+  <script src="app.js"></script>
+</body>
+</html>
